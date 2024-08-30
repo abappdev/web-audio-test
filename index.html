@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Automatic Audio Record and Repeater</title>
+</head>
+<body>
+    <h1>Automatic Audio Recorder</h1>
+    <p id="status">Status: Initializing...</p>
+
+    <script>
+        let mediaRecorder;
+        let audioChunks = [];
+        let audioBlob;
+        let audioUrl;
+        let audio;
+
+        function startRecording() {
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(stream => {
+                    mediaRecorder = new MediaRecorder(stream);
+                    mediaRecorder.start();
+
+                    document.getElementById('status').innerText = 'Status: Recording...';
+
+                    mediaRecorder.ondataavailable = event => {
+                        audioChunks.push(event.data);
+                    };
+
+                    mediaRecorder.onstop = () => {
+                        audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                        audioUrl = URL.createObjectURL(audioBlob);
+                        audioChunks = [];
+                        playAudio();
+                    };
+
+                    setTimeout(() => {
+                        if (mediaRecorder.state === "recording") {
+                            mediaRecorder.stop();
+                        }
+                    }, 5000); // Record for 5 seconds
+                })
+                .catch(error => {
+                    console.error('Error accessing microphone:', error);
+                    document.getElementById('status').innerText = 'Status: Error accessing microphone';
+                });
+        }
+
+        function playAudio() {
+            document.getElementById('status').innerText = 'Status: Playing audio...';
+            audio = new Audio(audioUrl);
+            audio.play();
+
+            audio.onended = () => {
+                document.getElementById('status').innerText = 'Status: Recording again...';
+                startRecording(); // Start recording again after playback
+            };
+        }
+
+        // Start the cycle automatically when the page loads
+        window.onload = function() {
+            startRecording();
+        };
+    </script>
+</body>
+</html>
